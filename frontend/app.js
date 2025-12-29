@@ -4,6 +4,18 @@ if (!token) {
   window.location.href = "login.html";
 }
 
+function fetchWithAuth(url, options = {}) {
+  const token = localStorage.getItem("access_token");
+
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      "Authorization": `Bearer ${token}`
+    }
+  });
+}
+
 function parseJwt(token) {
   const base64Payload = token.split('.')[1];
   const payload = atob(base64Payload);
@@ -69,12 +81,18 @@ async function loadDocuments() {
   });
 }
 
-async function loadDashboardMetrics() {
-  const res = await fetch(`${API_BASE}/metrics`,{
-    headers: {
-    "Authorization": `Bearer ${token}`
-    }
-  });
+async function loadDashboardMetrics(startDate = null, endDate = null) {
+  let url = `${API_BASE}/metrics`;
+
+  const params = new URLSearchParams();
+  if (startDate) params.append("start_date", startDate);
+  if (endDate) params.append("end_date", endDate);
+
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+
+  const res = await fetchWithAuth(url);
   const data = await res.json();
 
   document.getElementById("totalPdfs").innerText = data.total;
@@ -84,22 +102,90 @@ async function loadDashboardMetrics() {
   renderChart(data.daily_uploads);
 }
 
-function renderChart(dailyData) {
-  const ctx = document.getElementById('uploadChart');
+function applyDateFilter() {
+  const startDate = document.getElementById("startDate").value;
+  const endDate = document.getElementById("endDate").value;
 
-  if (uploadChart) uploadChart.destroy();
+  loadDashboardMetrics(startDate, endDate);
+}
+
+function resetDateFilter() {
+  document.getElementById("startDate").value = "";
+  document.getElementById("endDate").value = "";
+
+  loadDashboardMetrics();
+}
+
+
+function renderChart(dailyData) {
+  const ctx = document.getElementById("uploadChart");
+
+  if (uploadChart) {
+    uploadChart.destroy();
+  }
 
   uploadChart = new Chart(ctx, {
-    type: 'line',
+    type: "bar",
     data: {
       labels: dailyData.map(d => d.date),
-      datasets: [{
-        label: 'PDF Uploads',
-        data: dailyData.map(d => d.count)
-      }]
+      datasets: [
+        {
+          label: "PDF Uploads",
+          data: dailyData.map(d => d.count),
+          borderColor: "#000000ff",
+          backgroundColor: "#2563eb",
+          borderRadius: 6,
+          fill: true,
+          // tension: 0.4,          // smooth curve
+          // pointRadius: 4,
+          // pointHoverRadius: 6,
+          // pointBackgroundColor: "#2563eb"
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: "top",
+          labels: {
+            usePointStyle: true
+          }
+        },
+        tooltip: {
+          backgroundColor: "#0f172a",
+          titleColor: "#ffffff",
+          bodyColor: "#e5e7eb",
+          padding: 12
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            color: "#475569"
+          }
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: "#e5e7eb"
+          },
+          ticks: {
+            color: "#475569",
+            precision: 0
+          }
+        }
+      }
     }
   });
 }
+
+
 function logout() {
   // 1. Remove JWT
   localStorage.removeItem("access_token");
