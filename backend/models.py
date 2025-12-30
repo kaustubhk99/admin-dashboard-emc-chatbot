@@ -6,14 +6,17 @@ class PDFDocument(Base):
     __tablename__ = "pdf_documents"
 
     id = Column(Integer, primary_key=True, index=True)
-    filename = Column(String, nullable=False)
+
+    filename = Column(String, nullable=False)  # display only
+    job_id = Column(String, index=True, nullable=False)
+
     status = Column(String, default="uploaded")
     size = Column(Integer)
 
-    uploaded_by_email = Column(String, nullable=False)  # ✅ NEW
-
+    uploaded_by_email = Column(String, nullable=False)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
     processed_at = Column(DateTime, nullable=True)
+
 
 class AdminUser(Base):
     __tablename__ = "admin_users"

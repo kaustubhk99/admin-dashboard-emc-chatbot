@@ -1,29 +1,33 @@
-import time
-from datetime import datetime
+import logging
+from sqlalchemy.orm import Session
+
 from database import SessionLocal
 from models import PDFDocument
+from etl_pipeline.src.pipeline import run_full_pipeline
 
-def process_pdf(pdf_id: int):
-    db = SessionLocal()
+logger = logging.getLogger(__name__)
+
+def process_pdf(pdf_id: int) -> None:
+    db: Session = SessionLocal()
 
     try:
         pdf = db.query(PDFDocument).get(pdf_id)
+        if not pdf:
+            logger.error("PDF not found")
+            return
+
         pdf.status = "processing"
         db.commit()
 
-        # 🔹 Replace this with:
-        # - Text extraction
-        # - Chunking
-        # - Embeddings
-        # - Standard classification
-        print(f"Processing PDF ID: {pdf_id}, Filename: {pdf.filename}")
-        time.sleep(5)
-        print(f"Completed processing PDF ID: {pdf_id}, Filename: {pdf.filename}")
-        pdf.status = "completed"
-        pdf.processed_at = datetime.utcnow()
-        db.commit()
+        logger.info("Starting ETL pipeline")
+        run_full_pipeline()
 
-    except Exception:
+        pdf.status = "completed"
+        db.commit()
+        logger.info("ETL pipeline completed")
+
+    except Exception as e:
+        logger.exception("Pipeline failed")
         pdf.status = "failed"
         db.commit()
 
