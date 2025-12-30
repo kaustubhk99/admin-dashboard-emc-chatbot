@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
 from datetime import datetime
 from database import Base
 
@@ -21,4 +21,15 @@ class AdminUser(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class PDFExtraction(Base):
+    __tablename__ = "pdf_extractions"
+
+    id = Column(Integer, primary_key=True)
+    pdf_id = Column(Integer, ForeignKey("pdf_documents.id"), index=True)
+
+    page_number = Column(Integer)
+    text = Column(Text)
+
     created_at = Column(DateTime, default=datetime.utcnow)
